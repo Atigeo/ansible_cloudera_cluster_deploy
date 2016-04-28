@@ -34,6 +34,7 @@ Example Playbook
 Should be launched stand-alone for now.
 
 TO DO
+
 1. Complete automatic add to inventory of new instances
 2. Create /etc/hosts file automatically
 3. Complete other systemc init changes

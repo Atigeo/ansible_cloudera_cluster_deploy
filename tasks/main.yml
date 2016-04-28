@@ -52,9 +52,10 @@
           Name: "{{ default_master_name }}"
           Environment: "{{ cld_environment|default( default_environment ) }}"
           Client: "{{ cld_client|default( default_client ) }}"
-        user_data: "#cloud-config
-hostname: {{ default_master_hostname }}
-fqdn: {{ default_master_hostname}}.{{default_domain}}"
+        user_data: |
+          #cloud-config
+          hostname: {{ default_master_hostname }}
+          fqdn: {{ default_master_hostname}}.{{default_domain}}
       register: ec2_master
 
     - name: Launch Slave instances
@@ -69,39 +70,39 @@ fqdn: {{ default_master_hostname}}.{{default_domain}}"
           - device_name: /dev/sda1
             volume_types: "gp2"
             volume_size: "{{ slave_volume_size }}"
-        wait: false
+        wait: true
+        keypair: "{{ key_pair_name }}"
         groups: "{{ security_groups }}"
         instance_tags:
           Name: "{{ default_slave_name }} {{ item }}"
           Environment: "{{ cld_environment|default( default_environment ) }}"
           Client: "{{ cld_client|default( default_client ) }}"
-        user_data: "#cloud-config
-hostname: {{ default_slave_hostname }}
-fqdn: {{ default_slave_hostname}}.{{default_domain}}"
+        user_data: |
+          #cloud-config
+          hostname: {{ default_slave_hostname }}{{ item }}
+          fqdn: {{ default_slave_hostname}}{{ item }}.{{default_domain}}
       register: ec2_slaves
       with_sequence: count={{ num_slaves | default( default_num_slaves ) }}
 
-    - name: Print EC2 Master result
-      debug: var=ec2_master
-
-    - name: Print EC2 Slave result
-      debug: var=ec2_slaves
+    - name: Wait for EC2 instances to boot-up
+      pause: seconds=400
 
     - name: Wait for SSH
       wait_for:
         host: "{{ item.instances.0.private_ip }}"
         port: 22
-        delay: 10
-        timeout: 320
+        timeout: 300
+        delay: 30
         state: started
-      with_flattened:
+      ignore_errors: yes
+      with_items:
         - "{{ ec2_master }}"
         - "{{ ec2_slaves.results }}"
-#
-#    - name: Wait a little longer for centos
-#      pause: seconds=20
-#
-    - name: Add master to temporary inventory group with pem path
+
+    - name: Wait for SSH
+      pause: seconds=30
+
+    - name: Add
       add_host:
         name: "{{ item.instances.0.private_ip }}"
         groups: cluster_hosts
@@ -113,13 +114,14 @@ fqdn: {{ default_slave_hostname}}.{{default_domain}}"
   tasks:
     - ping:
 
-    - debug: var=hostvars
+    - name: Dump all vars
+      local_action: template src=templates/debug_dump_all_variables.j2 dest=/tmp/ansible.all
 
-#      # Idempotent way to build a /etc/hosts file with Ansible using your Ansible hosts inventory for a source.
-#      # Will include all hosts the playbook is run on.
-#      # Inspired from http://xmeblog.blogspot.com/2013/06/ansible-dynamicaly-update-etchosts.html
-#
-#    - name: "Build hosts file"
-#      lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].ansible_default_ipv4.address }} {{item}}" state=present
-#      when: hostvars[item].ansible_default_ipv4.address is defined
-#      with_items: groups['all']
+      # Idempotent way to build a /etc/hosts file with Ansible using your Ansible hosts inventory for a source.
+      # Will include all hosts the playbook is run on.
+      # Inspired from http://xmeblog.blogspot.com/2013/06/ansible-dynamicaly-update-etchosts.html
+
+    - name: "Build hosts file"
+      lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].ansible_default_ipv4.address }} {{ hostvars[item].ansible_hostname }} {{ hostvars[item].ansible_hostname }}.{{ default_domain }}" state=present
+      when: hostvars[item].ansible_default_ipv4.address is defined
+      with_items: "{{ groups['all'] }}"
