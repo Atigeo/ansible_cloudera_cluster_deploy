@@ -1,0 +1,7 @@
+{% for group_name in groups if group_name not in ['all','ungrouped'] %}
+[{{ group_name}}]
+{% for host in groups[group_name] %}
+{{ host }}
+{% endfor %}
+
+{% endfor %}

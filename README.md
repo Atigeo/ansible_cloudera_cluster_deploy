@@ -11,7 +11,7 @@ Boto package is required for the playbook to function
 
     pip install boto
 
-Also the AWS Access key and Secret key need to be included in the EC2_ACCESS_KEY and EC2_SECRET_KEY environment
+Also the AWS Access key and Secret key need to be included in the AWS_ACCESS_KEY and AWS_SECRET_KEY environment
 variables
 
 Role Variables
@@ -37,5 +37,5 @@ TO DO
 
 1. Complete automatic add to inventory of new instances
 2. Create /etc/hosts file automatically
-3. Complete other systemc init changes
+3. Complete other system init changes
 4. Refactor playbook to conform to the folder structure

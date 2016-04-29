@@ -1,0 +1,20 @@
+---
+- hosts: localhost
+  tasks:
+    - name: Add master to in-memory inventory and add it to groups
+      add_host:
+        name: 10.2.2.0
+        groups: cluster_hosts, master
+
+    - name: Add slave to in-memory inventory and add it to groups
+      add_host:
+        name: "{{ item }}"
+        groups: cluster_hosts, slaves
+      with_items:
+        - 10.2.2.1
+        - 10.2.2.2
+        - 10.2.2.3
+        - 10.2.2.4
+
+    - name: Dump all vars
+      local_action: template src=../templates/write_hosts.j2 dest=./inventory

@@ -2,7 +2,6 @@
 #
 - hosts: localhost
   vars:
-
   # Master customization
     master_vm_type: "t2.micro"                                  # General Purpose: 1 vCPU, 1 GB Memory
     #master_vm_type: "m4.xlarge"                                 # General Purpose: 4 vCPU, 16 GB Memory
@@ -22,7 +21,6 @@
     ssh_user: "ec2-user"
     key_pair_name: "tuce-test"
 
-  # Default values
     default_num_slaves: 2
     default_domain: "atigeo.com"
     default_master_name: "Cloudera Master"
@@ -31,7 +29,6 @@
     default_slave_hostname: "spark-slave"
     default_environment: "Test Environment"
     default_client: "Atigeo Internal"
-
   tasks:
     - name: Launch Master instance
       ec2:
@@ -102,20 +99,31 @@
     - name: Wait for SSH
       pause: seconds=30
 
-    - name: Add
+    - name: Add master to in-memory inventory and add it to groups
       add_host:
         name: "{{ item.instances.0.private_ip }}"
-        groups: cluster_hosts
+        groups: cluster_hosts, master
       with_flattened:
         - "{{ ec2_master }}"
+
+    - name: Add slaves to in-memory inventory and add them to groups
+      add_host:
+        name: "{{ item.instances.0.private_ip }}"
+        groups: cluster_hosts, slaves
+      with_items:
         - "{{ ec2_slaves.results }}"
 
+    - name: Create inventory file with the new hosts
+      local_action: template src=../templates/write_hosts.j2 dest=./hosts
+
 - hosts: cluster_hosts
+  vars:
+    default_domain: "atigeo.com"
   tasks:
     - ping:
 
     - name: Dump all vars
-      local_action: template src=templates/debug_dump_all_variables.j2 dest=/tmp/ansible.all
+      local_action: template src=templates/debug_dump_all_variables.j2 dest=./ansible.var_dump
 
       # Idempotent way to build a /etc/hosts file with Ansible using your Ansible hosts inventory for a source.
       # Will include all hosts the playbook is run on.
@@ -124,4 +132,5 @@
     - name: "Build hosts file"
       lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].ansible_default_ipv4.address }} {{ hostvars[item].ansible_hostname }} {{ hostvars[item].ansible_hostname }}.{{ default_domain }}" state=present
       when: hostvars[item].ansible_default_ipv4.address is defined
-      with_items: "{{ groups['all'] }}"
+      with_items: "{{ groups['cluster_hosts'] }}"
+
