@@ -1,0 +1,10 @@
+- hosts: test
+  tasks:
+    - name: "Create folder for new tuned profile with transparent hugepages (THP) disabled"
+      file: path="/etc/tuned/tuned_profile-nothp" state="directory"
+
+    - name: "Copy new tuned profile"
+      copy: src="./files/tuned.conf" dest="/etc/tuned/tuned_profile-nothp/tuned.conf" mode="u=rwx,g=rx,u=rx"
+
+    - name: "Enable new performance profile"
+      command: "tuned-adm profile tuned_profile-nothp"

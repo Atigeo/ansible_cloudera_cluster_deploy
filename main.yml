@@ -1,0 +1,20 @@
+---
+- hosts: localhost
+  roles:
+    - ec2_create
+
+  tasks:
+    # Creates a inventory file from the current in-memory inventory
+    - name: Create inventory file with the new hosts
+      local_action: template src="templates/write_hosts.j2" dest=./hosts
+
+- hosts: cluster_hosts
+  vars:
+    default_domain: "atigeo.com"
+  become: True
+  roles:
+    - basic_install
+    - ntp
+  tasks:
+    - name: "Reboot machines so all settings have effect"
+      command: "systemctl reboot"

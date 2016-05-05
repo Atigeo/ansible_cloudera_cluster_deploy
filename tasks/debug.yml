@@ -1,0 +1,6 @@
+# Start multiple ec2 instances with instance-specific tags assigned to each
+#
+- ping:
+
+- name: Dump all vars
+  local_action: template src=templates/debug_dump_all_variables.j2 dest=./ansible.var_dump

@@ -1,0 +1,70 @@
+- name: Install basic packages
+  yum: name={{ item }} state="present"
+  with_items:
+    - gcc
+    - gcc-c++
+    - freetype
+    - freetype-devel
+    - libpng-devel
+    - libcurl-devel
+    - cyrus-sasl
+    - cyrus-sasl-devel
+    - cyrus-sasl-gssapi
+    - cyrus-sasl-plain
+    - cyrus-sasl-md5
+    - cyrus-sasl-scram
+    - python-devel
+    - python-matplotlib
+    - python-virtualenv
+    - libselinux-python
+
+- name: Add CentOS and EPEL repositories
+  copy: src="./repos.repo" dest="/etc/yum.repos.d/centos_epel.repo"
+
+- name: Add EPEL GPG signing key
+  rpm_key: key="https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7" state="present"
+
+- name: Add CentOS GPG signing key
+  rpm_key: key="http://mirror.centos.org/centos/7/os/x86_64/RPM-GPG-KEY-CentOS-7" state="present"
+
+- name: Install yum packages
+  yum: name={{ item }} state="present"
+  with_items:
+    # EPEL Repository
+    - python-pip
+    # CentOS Repository
+    - atlas
+    - atlas-devel
+    - lapack-devel
+    - blas-devel
+
+- name: Upgrade pip
+  pip: name="pip" extra_args='--upgrade'
+
+# Workaround for bug in scikit-learn build. See:
+# - http://stackoverflow.com/questions/33526561/link-error-with-cblas
+# - https://github.com/scikit-learn/scikit-learn/issues/5489
+- name: Check to see if the blas library is present
+  stat: path="/usr/lib64/atlas/libcblas.so"
+  register: libcblas
+
+- name: Create link to atlas library as blas library
+  file: src="/usr/lib64/atlas/libsatlas.so" path="/usr/lib64/atlas/libcblas.so" state="link"
+  when: libcblas.stat.exists == False
+
+- name: Install pip packages
+  pip: name={{ item }} state="present" virtualenv="/usr/local/xpatterns-analytics"
+  with_items:
+    - numpy
+    - scipy
+    - scikit-learn
+    - pandas
+
+- name: Install pycurl with nss
+  pip: name="pycurl" extra_args='--global-option="--with-nss"' virtualenv="/usr/local/xpatterns-analytics"
+
+- name: Copy xPatterns Analytics
+  copy: src="./xpatterns_analytics-1.1-py2-none-any.whl" dest="/tmp/xpatterns_analytics-1.1-py2-none-any.whl"
+
+- name: Install xPatterns Analytics with pip
+  pip: name="file:///tmp/xpatterns_analytics-1.1-py2-none-any.whl" virtualenv="/usr/local/xpatterns-analytics"
