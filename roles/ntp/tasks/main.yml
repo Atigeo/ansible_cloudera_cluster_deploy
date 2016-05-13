@@ -1,0 +1,18 @@
+---
+# tasks file for ntp
+- name: Set the correct timezone.
+  file:
+    src: "/usr/share/zoneinfo/{{ ntp_timezone }}"
+    dest: "/etc/localtime"
+    state: "link"
+    force: Yes
+
+- name: "Install ntp package"
+  yum: name="ntp" state="present"
+
+- name: "Generate ntp configuration file"
+  template: src="ntp_conf.j2" dest="/etc/ntp.conf"
+
+- name: "Enable ntp service and start it"
+  service: name="ntpd" state="started" enabled=Yes
+  when: ntp_enabled

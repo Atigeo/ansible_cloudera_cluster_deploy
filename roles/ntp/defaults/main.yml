@@ -1,0 +1,10 @@
+---
+# defaults file for ntp
+ntp_enabled: true
+ntp_timezone: America/Chicago
+ntp_servers:
+ - 0.amazon.pool.ntp.org iburst
+ - 1.amazon.pool.ntp.org iburst
+ - 2.amazon.pool.ntp.org iburst
+ - 3.amazon.pool.ntp.org iburst
+
